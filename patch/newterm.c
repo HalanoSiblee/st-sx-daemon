@@ -10,6 +10,20 @@ static void exec_current_exe(void);
 void
 newterm(const Arg* a)
 {
+	char *instaspawn_cwd = NULL;
+	if (!(a->i & NEWTERM_DISABLE_OSC7) && term.cwd) {
+		instaspawn_cwd = term.cwd;
+	}
+#if defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+	else if (a->i & NEWTERM_FG_CWD) {
+		instaspawn_cwd = get_foreground_cwd();
+	} else {
+		instaspawn_cwd = getcwd_by_pid(pid);
+	}
+#endif
+	if (instaspawn_cwd && *instaspawn_cwd && instaspawn_request(instaspawn_cwd) == 0)
+		return;
+
 	switch (fork()) {
 	case -1:
 		die("fork failed: %s\n", strerror(errno));

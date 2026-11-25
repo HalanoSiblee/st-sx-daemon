@@ -11,7 +11,10 @@ COMMIT = $$(git rev-parse --short HEAD 2>/dev/null)
 PROJECT = st-sx
 DISTNAME = $(PROJECT)-$(VERSION)-$(COMMIT)
 
-STLDFLAGS += -lpcre2-32
+# Optimization and stripping flags
+OPTFLAGS = -O3 -march=native -flto
+STCFLAGS += $(OPTFLAGS)
+STLDFLAGS += -lpcre2-32 $(OPTFLAGS) -s
 
 all: st
 
@@ -30,7 +33,7 @@ x.o: arg.h config.h patch/* sixel.h st.h win.h $(LIGATURES_H)
 $(OBJ): config.h config.mk
 
 st: $(OBJ)
-	$(CC) -o $@ $(OBJ) $(STLDFLAGS)
+	$(CC) $(STCFLAGS) -o $@ $(OBJ) $(STLDFLAGS)
 
 clean:
 	rm -f st $(OBJ) $(PROJECT)*.tar.gz

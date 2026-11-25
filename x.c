@@ -1533,7 +1533,8 @@ xinit(int cols, int rows)
 	win.mode = MODE_NUMLOCK;
 	resettitle();
 	xhints();
-	XMapWindow(xw.dpy, xw.win);
+	if (!instaspawn_worker_mode)
+		XMapWindow(xw.dpy, xw.win);
 	XSync(xw.dpy, False);
 
 	clock_gettime(CLOCK_MONOTONIC, &xsel.tclick1);
@@ -3020,6 +3021,13 @@ run(void)
 	struct timespec lastscroll, lastblink, cursorlastblink;
 	double timeout, cursortimeout, scrolltimeout, vbelltimeout;
 
+	/* A daemon worker stays hidden until it receives an activation. */
+	if (instaspawn_worker_mode) {
+		if (instaspawn_worker_activate() < 0)
+			exit(0);
+		XMapRaised(xw.dpy, xw.win);
+		XFlush(xw.dpy);
+	}
 	/* Waiting for window mapping */
 	do {
 		XNextEvent(xw.dpy, &ev);
@@ -3217,6 +3225,24 @@ int
 main(int argc, char *argv[])
 {
 	char *value;
+	/* Daemon and IPC commands do not initialize a visible terminal. */
+	argv0 = argv[0];
+	if (argc > 1 && !strcmp(argv[1], "--daemon"))
+		return instaspawn_daemon_start(argv[0]);
+	if (argc > 1 && !strcmp(argv[1], "ipc"))
+		return instaspawn_ipc_main(argc - 2, argv + 2);
+	if (argc > 1 && !strcmp(argv[1], "--daemon-worker")) {
+		if (argc < 3)
+			die("usage: %s --daemon-worker FD\n", argv[0]);
+		instaspawn_worker_init(atoi(argv[2]));
+		/* Workers use default st settings; discard the private daemon arguments. */
+		argc = 1;
+		argv[1] = NULL;
+	}
+	/* A plain `st` invocation asks the daemon for a prewarmed child. */
+	/* If the daemon is absent, keep the normal st startup path. */
+	if (!instaspawn_worker_mode && argc == 1 && instaspawn_request(NULL) == 0)
+		return 0;
 	xw.l = xw.t = 0;
 	xw.isfixed = False;
 

@@ -3,6 +3,7 @@
 #include "externalpipe.h"
 #include "keyboardselect_st.h"
 #include "newterm.h"
+#include "instaspawn.h"
 #include "openurlonclick.h"
 #include "osc7.h"
 #include "osc8_st.h"
